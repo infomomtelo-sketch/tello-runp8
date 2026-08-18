@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, appOrigin } from '../lib/supabase';
 import { Mail, Lock } from 'lucide-react';
 
 function Auth({ onAuthSuccess }) {
@@ -20,7 +20,7 @@ function Auth({ onAuthSuccess }) {
           email,
           password,
           options: {
-            redirectTo: `${import.meta.env.VITE_TELLO_DOMAIN || 'http://localhost:3000'}/`,
+            redirectTo: appOrigin,
           },
         });
         if (error) throw error;
