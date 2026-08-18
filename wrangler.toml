@@ -1,0 +1,15 @@
+name = "tello-worker"
+main = "index.js"
+compatibility_date = "2024-01-01"
+account_id = "your-account-id"
+workers_dev = true
+
+[env.production]
+name = "tello-worker-prod"
+route = "tello.infomomtelo.workers.dev"
+
+[env.development]
+name = "tello-worker-dev"
+
+# Secrets (set via Cloudflare Dashboard)
+# wrangler secret put ANTHROPIC_API_KEY
