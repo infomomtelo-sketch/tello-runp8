@@ -97,27 +97,46 @@ Upload files via GitHub web UI:
    - `VITE_TELLO_WORKER_URL` = `https://tello.infomomtelo.workers.dev`
 6. Deploy
 
-### 4. **Cloudflare Worker (API)**
+### 4. **API (Cloudflare Pages Functions)**
 
-`index.js` in the repo root **is** the Worker — `wrangler.toml` already points at it.
-Nothing needs to be copied or renamed.
+The API ships with the site — no separate Worker to set up. The three endpoints
+live in `functions/api/` and Cloudflare Pages deploys them automatically on every
+push, alongside the frontend:
 
-From the repo root:
+- `POST /api/analyze` — Claude decision analysis
+- `POST /api/chat` — multi-turn conversation
+- `POST /api/vision` — image analysis
 
-```bash
-npx wrangler login
-npx wrangler secret put ANTHROPIC_API_KEY   # paste your Claude API key when prompted
-npx wrangler deploy
+The only manual step is the key. In **Pages → Settings → Environment variables →
+Production**, add:
+
+```
+ANTHROPIC_API_KEY = sk-ant-...     (type: Secret / Encrypted)
 ```
 
-The worker is named `tello`, so it deploys to `https://tello.infomomtelo.workers.dev`,
-matching `VITE_TELLO_WORKER_URL`. Renaming the worker changes that hostname — keep the
-two in sync.
+**Do not prefix it with `VITE_`.** Vite inlines every `VITE_*` variable into the
+browser bundle, which would publish the key. Unprefixed variables are only
+visible to Functions, server-side.
 
-The Worker only accepts browser requests from the origins in `ALLOWED_ORIGINS`
-(set under `[vars]` in `wrangler.toml`); anything else gets a 403. Add any new
-frontend domain there. Note this is a CORS allowlist, not authentication — see
-the security note below.
+Because the API is same-origin (`tello.runp8.com/api/...`), there is no CORS
+configuration and no worker URL to keep in sync.
+
+<details>
+<summary>Optional: deploying the API as a standalone Worker instead</summary>
+
+`index.js` + `wrangler.toml` deploy the same endpoints as their own Worker,
+sharing the identical logic from `shared/tello-claude.js`. Only needed if you
+want the API on its own hostname.
+
+```bash
+npx wrangler deploy
+npx wrangler secret put ANTHROPIC_API_KEY
+```
+
+The Worker restricts callers by `Origin` (`ALLOWED_ORIGINS` in `wrangler.toml`),
+since it is cross-origin. Note that `Origin` is browser-set and therefore not
+authentication — see the security note below.
+</details>
 
 ### 5. **Custom Domain**
 
@@ -146,7 +165,15 @@ tello-runp8/
 │   │   └── ShareView.jsx
 │   └── lib/
 │       └── supabase.js
-├── index.js (Cloudflare Worker)
+├── functions/
+│   └── api/
+│       ├── analyze.js
+│       ├── chat.js
+│       └── vision.js
+├── shared/
+│   ├── tello-claude.js  (Claude calls, shared)
+│   └── http.js
+├── index.js (optional standalone Worker)
 ├── wrangler.toml
 ├── .env.example
 ├── tello-schema-phase1.sql
@@ -195,9 +222,7 @@ npm run preview
 - [ ] Cloudflare Pages connected to GitHub
 - [ ] Environment variables set in Cloudflare Pages (all four `VITE_*`, including
       `VITE_TELLO_DOMAIN` — the app throws on load if Supabase vars are missing)
-- [ ] Cloudflare Worker deployed to `tello.infomomtelo.workers.dev`
-- [ ] `ANTHROPIC_API_KEY` secret set in Worker (`wrangler secret put`, never in `[vars]`)
-- [ ] `ALLOWED_ORIGINS` in `wrangler.toml` covers every domain the frontend is served from
+- [ ] `ANTHROPIC_API_KEY` set in Pages env vars as a Secret, with no `VITE_` prefix
 - [ ] Custom domain `tello.runp8.com` configured in DNS
 - [ ] End-to-end test:
   - Sign up → Create business → Log decision → Share link
@@ -214,17 +239,15 @@ npm run preview
 
 ---
 
-## 🔒 Security note on the Worker
+## 🔒 Security note on the API
 
-The Worker restricts requests by `Origin`, which stops other websites from
-spending your Anthropic credits via a visitor's browser. It is **not**
-authentication: `Origin` is set by the browser, so a direct request from curl or
-any server-side script can present whatever origin it likes. Anyone who learns
-the Worker URL can still call it.
+`/api/*` is open to anyone who loads the site — there is no check that the caller
+is a signed-in user, so anyone can script requests against it and spend your
+Anthropic credits.
 
-If usage or spend becomes a concern, the real fix is to verify the caller's
-Supabase JWT inside the Worker (the frontend already holds a session token) and
-reject requests without a valid one.
+If usage or spend becomes a concern, verify the caller's Supabase JWT inside the
+Functions (the frontend already holds a session token) and reject requests
+without a valid one.
 
 ---
 

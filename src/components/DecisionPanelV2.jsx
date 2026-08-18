@@ -15,7 +15,9 @@ import {
   X,
 } from 'lucide-react';
 
-const WORKER_URL = import.meta.env.VITE_TELLO_WORKER_URL || '';
+// Served by the Pages Functions in functions/api/ — same origin, so no CORS
+// and no configured URL to keep in sync.
+const API_BASE = '/api';
 
 const makeShareToken = () =>
   (crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`).replace(/-/g, '').slice(0, 24);
@@ -93,8 +95,7 @@ function DecisionPanelV2({ business, onBack }) {
   };
 
   const callWorker = async (path, payload) => {
-    if (!WORKER_URL) throw new Error('VITE_TELLO_WORKER_URL is not configured');
-    const response = await fetch(`${WORKER_URL}${path}`, {
+    const response = await fetch(`${API_BASE}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
