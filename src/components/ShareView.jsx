@@ -21,18 +21,18 @@ function ShareView() {
 
   const loadDecision = async () => {
     try {
-      const { data, error: loadError } = await supabase
-        .from('tello_decisions')
-        .select('title, context, options, decision, reasoning, outcome, created_at')
-        .eq('share_token', shareToken)
-        .maybeSingle();
+      // Reads through a SECURITY DEFINER function (see tello-schema-phase3.sql) so a
+      // caller can only fetch the one decision whose token they already hold.
+      const { data, error: loadError } = await supabase.rpc('get_shared_decision', {
+        p_share_token: shareToken,
+      });
 
       if (loadError) throw loadError;
-      if (!data) {
+      if (!data || data.length === 0) {
         setError('This decision is no longer shared, or the link is invalid.');
         return;
       }
-      setDecision(data);
+      setDecision(data[0]);
     } catch (err) {
       setError(err.message);
     } finally {

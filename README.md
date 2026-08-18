@@ -54,6 +54,21 @@ Once Phase 1 is confirmed (6 tables created), run **Phase 2**:
 
 Verify: Should show **9 total Tello tables** in Supabase.
 
+Finally, run **Phase 3** to enable public share links:
+```bash
+-- Copy entire contents of tello-schema-phase3.sql
+-- Paste into Supabase SQL editor
+-- Click Run
+```
+
+Verify: the result should show `get_shared_decision` with
+`is_security_definer = true` and `anon_can_execute = true`.
+
+Share links read through this function rather than a permissive RLS policy —
+the anon key is public, so a table-level "any row with a share_token" policy
+would let anyone dump every shared decision. The function only ever returns the
+single decision whose token the caller already has.
+
 ### 2. **GitHub Setup**
 
 Create repo: `infomomtelo-sketch/tello-runp8` (public)
@@ -124,7 +139,8 @@ tello-runp8/
 ├── wrangler.toml
 ├── .env.example
 ├── tello-schema-phase1.sql
-└── tello-schema-phase2.sql
+├── tello-schema-phase2.sql
+└── tello-schema-phase3.sql
 ```
 
 ---
@@ -163,9 +179,11 @@ npm run preview
 ## ⚙️ Deployment Checklist
 
 - [ ] Supabase Phase 1 & 2 migrations complete (9 tables visible)
+- [ ] Supabase Phase 3 migration complete (`get_shared_decision` function exists)
 - [ ] GitHub repo created & all files uploaded
 - [ ] Cloudflare Pages connected to GitHub
-- [ ] Environment variables set in Cloudflare Pages
+- [ ] Environment variables set in Cloudflare Pages (all four `VITE_*`, including
+      `VITE_TELLO_DOMAIN` — the app throws on load if Supabase vars are missing)
 - [ ] Cloudflare Worker deployed to `tello.infomomtelo.workers.dev`
 - [ ] `ANTHROPIC_API_KEY` secret set in Worker
 - [ ] Custom domain `tello.runp8.com` configured in DNS
