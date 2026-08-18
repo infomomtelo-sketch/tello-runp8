@@ -10,7 +10,9 @@ function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [business, setBusiness] = useState(null);
-  const [view, setView] = useState('dashboard');
+  const [view, setView] = useState(
+    new URLSearchParams(window.location.search).has('share') ? 'share' : 'dashboard'
+  );
   const [selectedDecision, setSelectedDecision] = useState(null);
 
   useEffect(() => {
@@ -45,6 +47,9 @@ function App() {
     if (error && error.code !== 'PGRST116') console.error(error);
   };
 
+  // Share view (public, no auth required — handled before the auth gate)
+  if (view === 'share') return <ShareView />;
+
   if (loading) return <div className="flex items-center justify-center h-screen">Loading...</div>;
 
   if (!session) return <Auth onAuthSuccess={() => setSession(session)} />;
@@ -52,11 +57,6 @@ function App() {
   // Check if business exists
   if (!business && view !== 'onboarding') {
     return <Onboarding onComplete={(b) => { setBusiness(b); setView('dashboard'); }} />;
-  }
-
-  // Share view (public, no auth required — handle separately)
-  if (view === 'share') {
-    return <ShareView />;
   }
 
   return (
