@@ -1,15 +1,15 @@
-name = "tello-worker"
+# Deploys to https://tello.infomomtelo.workers.dev
+# The worker name is the first label of the workers.dev hostname, so this must
+# stay in sync with VITE_TELLO_WORKER_URL in the Cloudflare Pages settings.
+name = "tello"
 main = "index.js"
 compatibility_date = "2024-01-01"
-account_id = "your-account-id"
 workers_dev = true
 
-[env.production]
-name = "tello-worker-prod"
-route = "tello.infomomtelo.workers.dev"
+[vars]
+# Browser origins permitted to call this Worker (comma-separated).
+ALLOWED_ORIGINS = "https://tello.runp8.com,http://localhost:3000"
 
-[env.development]
-name = "tello-worker-dev"
-
-# Secrets (set via Cloudflare Dashboard)
-# wrangler secret put ANTHROPIC_API_KEY
+# Secrets are deliberately NOT declared here — this file is committed, and
+# anything under [vars] is stored in plaintext. Set the API key out of band:
+#   wrangler secret put ANTHROPIC_API_KEY

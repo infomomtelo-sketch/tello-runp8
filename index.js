@@ -1,17 +1,46 @@
 // Tello Cloudflare Worker
 // Deploy to tello.infomomtelo.workers.dev
 
+// Browser origins allowed to call this Worker. Override with the ALLOWED_ORIGINS
+// var (comma-separated) in wrangler.toml or the dashboard.
+const DEFAULT_ALLOWED_ORIGINS = ['https://tello.runp8.com', 'http://localhost:3000'];
+
+function resolveAllowedOrigins(env) {
+  const configured = (env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((origin) => origin.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+  return configured.length > 0 ? configured : DEFAULT_ALLOWED_ORIGINS;
+}
+
+function buildCorsHeaders(origin) {
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    Vary: 'Origin',
+  };
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // CORS headers
-    const corsHeaders = {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    };
+    // Allowlist rather than '*': a wildcard lets any page on the web spend this
+    // Worker's Anthropic credits from a visitor's browser.
+    const origin = request.headers.get('Origin');
+    const isAllowedOrigin =
+      Boolean(origin) && resolveAllowedOrigins(env).includes(origin.replace(/\/+$/, ''));
+
+    if (!isAllowedOrigin) {
+      return new Response(
+        request.method === 'OPTIONS' ? null : JSON.stringify({ error: 'Origin not allowed' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const corsHeaders = buildCorsHeaders(origin);
 
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: corsHeaders });

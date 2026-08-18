@@ -99,14 +99,25 @@ Upload files via GitHub web UI:
 
 ### 4. **Cloudflare Worker (API)**
 
-1. Copy `worker-index.js` → `index.js`
-2. Copy `wrangler.toml` to repo root
-3. Set secret via Cloudflare Dashboard:
-   ```bash
-   wrangler secret put ANTHROPIC_API_KEY
-   # Paste your Claude API key when prompted
-   ```
-4. Deploy to `tello.infomomtelo.workers.dev`
+`index.js` in the repo root **is** the Worker — `wrangler.toml` already points at it.
+Nothing needs to be copied or renamed.
+
+From the repo root:
+
+```bash
+npx wrangler login
+npx wrangler secret put ANTHROPIC_API_KEY   # paste your Claude API key when prompted
+npx wrangler deploy
+```
+
+The worker is named `tello`, so it deploys to `https://tello.infomomtelo.workers.dev`,
+matching `VITE_TELLO_WORKER_URL`. Renaming the worker changes that hostname — keep the
+two in sync.
+
+The Worker only accepts browser requests from the origins in `ALLOWED_ORIGINS`
+(set under `[vars]` in `wrangler.toml`); anything else gets a 403. Add any new
+frontend domain there. Note this is a CORS allowlist, not authentication — see
+the security note below.
 
 ### 5. **Custom Domain**
 
@@ -185,7 +196,8 @@ npm run preview
 - [ ] Environment variables set in Cloudflare Pages (all four `VITE_*`, including
       `VITE_TELLO_DOMAIN` — the app throws on load if Supabase vars are missing)
 - [ ] Cloudflare Worker deployed to `tello.infomomtelo.workers.dev`
-- [ ] `ANTHROPIC_API_KEY` secret set in Worker
+- [ ] `ANTHROPIC_API_KEY` secret set in Worker (`wrangler secret put`, never in `[vars]`)
+- [ ] `ALLOWED_ORIGINS` in `wrangler.toml` covers every domain the frontend is served from
 - [ ] Custom domain `tello.runp8.com` configured in DNS
 - [ ] End-to-end test:
   - Sign up → Create business → Log decision → Share link
@@ -199,6 +211,20 @@ npm run preview
 3. **Templates** — More decision frameworks (hiring, fundraising, etc.)
 4. **Outcomes** — Track decision results and refine Tello's guidance
 5. **Mobile** — React Native version for on-the-go decisions
+
+---
+
+## 🔒 Security note on the Worker
+
+The Worker restricts requests by `Origin`, which stops other websites from
+spending your Anthropic credits via a visitor's browser. It is **not**
+authentication: `Origin` is set by the browser, so a direct request from curl or
+any server-side script can present whatever origin it likes. Anyone who learns
+the Worker URL can still call it.
+
+If usage or spend becomes a concern, the real fix is to verify the caller's
+Supabase JWT inside the Worker (the frontend already holds a session token) and
+reject requests without a valid one.
 
 ---
 
