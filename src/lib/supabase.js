@@ -1,7 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+// Values pasted into a dashboard pick up stray whitespace and line breaks. A key
+// containing either produces an invalid HTTP header, so fetch throws before the
+// request is sent ("Load failed" in Safari) — which looks like the server is down.
+const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim().replace(/\/+$/, '')
+const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').replace(/\s/g, '')
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase credentials in environment variables') 
