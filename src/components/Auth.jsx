@@ -31,7 +31,7 @@ function Auth({ onAuthSuccess }) {
           password,
         });
         if (error) throw error;
-        onAuthSuccess();
+        onAuthSuccess?.();
       }
     } catch (err) {
       setError(err.message);

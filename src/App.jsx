@@ -56,7 +56,9 @@ function App() {
 
   if (loading) return <div className="flex items-center justify-center h-screen">Loading...</div>;
 
-  if (!session) return <Auth onAuthSuccess={() => setSession(session)} />;
+  // No onAuthSuccess handler: onAuthStateChange above already sets the session.
+  // Passing one that closes over `session` reset it to null right after sign-in.
+  if (!session) return <Auth />;
 
   // Check if business exists
   if (!business && view !== 'onboarding') {
