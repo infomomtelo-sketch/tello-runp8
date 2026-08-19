@@ -201,7 +201,7 @@ image. Answer in 2-4 sentences.`,
 // Re-examines a decision that already has an analysis, against whatever the
 // business context looks like now (and an Obsidian vault snapshot when present).
 export async function reasonOverDecision(apiKey, body) {
-  const { title, context, options, prior_analysis, outcome, vault_context } = body;
+  const { decision_id, title, context, options, prior_analysis, outcome, vault_context } = body;
 
   if (!context && !title) throw new Error('Missing decision to reason about');
 
@@ -230,5 +230,8 @@ since the earlier analysis, and say plainly if nothing has.`,
     messages: [{ role: 'user', content: userPrompt }],
   });
 
-  return { analysis: shapeAnalysis(firstText(data, 'Unable to re-examine decision')) };
+  return {
+    decision_id: decision_id || null,
+    analysis: shapeAnalysis(firstText(data, 'Unable to re-examine decision')),
+  };
 }

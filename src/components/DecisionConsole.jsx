@@ -201,6 +201,7 @@ function DecisionConsole({ business, onBack }) {
 
     try {
       const { analysis: result } = await callApi('/reason', {
+        decision_id: decisionId,
         title,
         context,
         options,

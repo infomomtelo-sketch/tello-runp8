@@ -104,7 +104,7 @@ configuration and no worker URL to keep in sync.
 <details>
 <summary>Optional: deploying the API as a standalone Worker instead</summary>
 
-`index.js` + `wrangler.toml` deploy the same endpoints as their own Worker,
+`worker-index.js` + `wrangler.toml` deploy the same endpoints as their own Worker,
 sharing the identical logic from `shared/tello-claude.js`. Only needed if you
 want the API on its own hostname.
 
@@ -157,7 +157,7 @@ tello-runp8/
 ├── shared/
 │   ├── tello-claude.js  (Claude calls, shared)
 │   └── http.js
-├── index.js (optional standalone Worker)
+├── worker-index.js (optional standalone Worker)
 ├── wrangler.toml
 ├── .env.example
 ├── tello-schema-all.sql   (run this one)
