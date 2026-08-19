@@ -5,9 +5,9 @@ import {
   Check,
   Copy,
   ImagePlus,
-  Loader2,
   Mic,
   MicOff,
+  Save,
   Send,
   Share2,
   Sparkles,
@@ -21,6 +21,18 @@ const API_BASE = '/api';
 
 const makeShareToken = () =>
   (crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`).replace(/-/g, '').slice(0, 24);
+
+function Section({ title, right, children, className = '' }) {
+  return (
+    <section className={`panel overflow-hidden ${className}`}>
+      <header className="flex items-center justify-between px-5 py-3 border-b border-edge">
+        <span className="label text-ink">{title}</span>
+        {right}
+      </header>
+      <div className="p-5">{children}</div>
+    </section>
+  );
+}
 
 function DecisionPanelV2({ business, onBack }) {
   const [title, setTitle] = useState('');
@@ -44,7 +56,7 @@ function DecisionPanelV2({ business, onBack }) {
   const [error, setError] = useState('');
   const recognitionRef = useRef(null);
 
-  // Voice input (Web Speech API) — appends transcript to the context field
+  // Voice input (Web Speech API) — appends transcript to the context field.
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
@@ -94,14 +106,14 @@ function DecisionPanelV2({ business, onBack }) {
     window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
   };
 
-  const callWorker = async (path, payload) => {
+  const callApi = async (path, payload) => {
     const response = await fetch(`${API_BASE}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Tello worker request failed');
+    if (!response.ok) throw new Error(data.error || 'Request failed');
     return data;
   };
 
@@ -121,7 +133,7 @@ function DecisionPanelV2({ business, onBack }) {
       setImages((prev) => [...prev, image]);
 
       try {
-        const { analysis: visionAnalysis } = await callWorker('/vision', { image_data: dataUrl });
+        const { analysis: visionAnalysis } = await callApi('/vision', { image_data: dataUrl });
         setImages((prev) =>
           prev.map((img) => (img.id === image.id ? { ...img, analysis: visionAnalysis } : img))
         );
@@ -138,7 +150,7 @@ function DecisionPanelV2({ business, onBack }) {
     setError('');
 
     try {
-      const { analysis: result } = await callWorker('/analyze', {
+      const { analysis: result } = await callApi('/analyze', {
         context,
         options,
         business_type: business.type,
@@ -165,7 +177,7 @@ function DecisionPanelV2({ business, onBack }) {
     setError('');
 
     try {
-      const { reply } = await callWorker('/chat', {
+      const { reply } = await callApi('/chat', {
         messages: nextMessages,
         context,
         business_type: business.type,
@@ -236,196 +248,212 @@ function DecisionPanelV2({ business, onBack }) {
   };
 
   return (
-    <div className="space-y-6">
-      <button
-        onClick={onBack}
-        className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
-      >
-        <ArrowLeft size={18} />
-        Back to dashboard
+    <div className="space-y-5 animate-fade-up">
+      <button onClick={onBack} className="pip text-faint hover:text-ink transition-colors">
+        <ArrowLeft size={13} />
+        Dashboard
       </button>
 
-      {/* Decision input */}
-      <div className="bg-white rounded-lg shadow p-6 space-y-4">
-        <h2 className="text-xl font-bold text-gray-900">New Decision</h2>
+      <Section
+        title="New decision"
+        right={<span className="readout text-[11px] text-faint">{business.type}</span>}
+      >
+        <div className="space-y-5">
+          <div>
+            <label className="label block mb-2">Title</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Should we raise prices?"
+            />
+          </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Should we raise prices?"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-          />
-        </div>
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="label">Context</label>
+              <button
+                type="button"
+                onClick={toggleListening}
+                className={`pip transition-colors ${
+                  listening ? 'text-rose' : 'text-indigo-bright hover:text-white'
+                }`}
+              >
+                {listening ? <MicOff size={13} /> : <Mic size={13} />}
+                {listening ? 'Listening' : 'Speak'}
+              </button>
+            </div>
+            <textarea
+              value={context}
+              onChange={(e) => setContext(e.target.value)}
+              placeholder="What's the situation?"
+              rows="4"
+            />
+          </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-gray-700">Context</label>
+          <div>
+            <label className="label block mb-2">Options — one per line</label>
+            <textarea
+              value={options}
+              onChange={(e) => setOptions(e.target.value)}
+              placeholder={'Raise prices 20%\nKeep prices, cut costs'}
+              rows="3"
+              className="font-mono text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="pip text-indigo-bright hover:text-white cursor-pointer transition-colors">
+              <ImagePlus size={13} />
+              Attach images
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+            </label>
+
+            {images.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {images.map((img) => (
+                  <div
+                    key={img.id}
+                    className="flex gap-3 bg-hull border border-edge rounded-md p-3"
+                  >
+                    <img
+                      src={img.dataUrl}
+                      alt={img.name}
+                      className="w-14 h-14 object-cover rounded border border-edge"
+                    />
+                    <div className="flex-1 min-w-0">
+                      {img.analysis ? (
+                        <p className="text-sm text-dim">{img.analysis}</p>
+                      ) : (
+                        <>
+                          <p className="label mb-2">Analyzing</p>
+                          <div className="scanner" />
+                        </>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => removeImage(img.id)}
+                      className="text-faint hover:text-rose shrink-0"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {error && (
+            <p className="font-mono text-xs text-rose border-l-2 border-rose/60 pl-3">{error}</p>
+          )}
+
+          <div className="flex flex-wrap gap-3">
             <button
-              type="button"
-              onClick={toggleListening}
-              className={`flex items-center gap-2 text-sm font-semibold ${
-                listening ? 'text-red-600' : 'text-blue-600'
-              }`}
+              onClick={handleAnalyze}
+              disabled={analyzing || !context.trim()}
+              className="btn-primary"
             >
-              {listening ? <MicOff size={16} /> : <Mic size={16} />}
-              {listening ? 'Stop' : 'Speak'}
+              <Sparkles size={15} />
+              {analyzing ? 'Analyzing...' : 'Ask Tello'}
+            </button>
+            <button onClick={handleSave} disabled={saving || !title.trim()} className="btn-ghost">
+              <Save size={15} />
+              {saving ? 'Saving...' : decisionId ? 'Update' : 'Save decision'}
             </button>
           </div>
-          <textarea
-            value={context}
-            onChange={(e) => setContext(e.target.value)}
-            placeholder="What's the situation?"
-            rows="4"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-          />
+
+          {analyzing && <div className="scanner" />}
         </div>
+      </Section>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Options (one per line)
-          </label>
-          <textarea
-            value={options}
-            onChange={(e) => setOptions(e.target.value)}
-            placeholder={'Raise prices 20%\nKeep prices, cut costs'}
-            rows="3"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-          />
-        </div>
-
-        {/* Images */}
-        <div>
-          <label className="flex items-center gap-2 text-sm font-semibold text-blue-600 cursor-pointer">
-            <ImagePlus size={16} />
-            Attach images
-            <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
-          </label>
-
-          {images.length > 0 && (
-            <div className="mt-4 space-y-3">
-              {images.map((img) => (
-                <div key={img.id} className="flex gap-3 p-3 bg-gray-50 rounded">
-                  <img src={img.dataUrl} alt={img.name} className="w-16 h-16 object-cover rounded" />
-                  <div className="flex-1 text-sm text-gray-700">
-                    {img.analysis || 'Analyzing image...'}
-                  </div>
-                  <button onClick={() => removeImage(img.id)} className="text-gray-400 hover:text-gray-600">
-                    <X size={16} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {error && <p className="text-red-600 text-sm">{error}</p>}
-
-        <div className="flex gap-4">
-          <button
-            onClick={handleAnalyze}
-            disabled={analyzing || !context.trim()}
-            className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50"
-          >
-            {analyzing ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-            {analyzing ? 'Analyzing...' : 'Ask Tello'}
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving || !title.trim()}
-            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : decisionId ? 'Update Decision' : 'Save Decision'}
-          </button>
-        </div>
-      </div>
-
-      {/* Analysis */}
       {analysis && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-start justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900">Tello's Analysis</h2>
+        <Section
+          title="Tello's analysis"
+          right={
             <button
               onClick={() => speak(analysis)}
-              className="flex items-center gap-2 text-blue-600 text-sm font-semibold hover:underline"
+              className="pip text-indigo-bright hover:text-white"
             >
-              <Volume2 size={16} />
+              <Volume2 size={13} />
               Listen
             </button>
-          </div>
-          <p className="text-gray-700 whitespace-pre-wrap">{analysis}</p>
-        </div>
+          }
+        >
+          <p className="text-ink leading-relaxed whitespace-pre-wrap">{analysis}</p>
+        </Section>
       )}
 
-      {/* Share link */}
       {shareToken && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h2 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
-            <Share2 size={18} />
-            Share with an advisor
-          </h2>
-          <div className="flex gap-2">
+        <Section
+          title="Share link"
+          right={<span className="pip text-emerald">read only</span>}
+        >
+          <div className="flex flex-col sm:flex-row gap-2">
             <input
               type="text"
               value={shareUrl}
               readOnly
-              className="flex-1 px-4 py-2 border border-blue-200 rounded-lg bg-white text-sm text-gray-700"
+              className="font-mono text-xs text-cyan"
             />
-            <button
-              onClick={copyShareUrl}
-              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700"
-            >
-              {copied ? <Check size={16} /> : <Copy size={16} />}
+            <button onClick={copyShareUrl} className="btn-primary shrink-0">
+              {copied ? <Check size={15} /> : <Copy size={15} />}
               {copied ? 'Copied' : 'Copy'}
             </button>
           </div>
-        </div>
+          <p className="label mt-3 text-faint">
+            <Share2 size={11} className="inline mr-1.5" />
+            Anyone with this link can read the decision
+          </p>
+        </Section>
       )}
 
-      {/* Chat */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">Talk it through</h2>
-        </div>
-
-        <div className="p-6 space-y-4">
+      <Section title="Talk it through">
+        <div className="space-y-3">
           {messages.length === 0 ? (
-            <p className="text-gray-500 text-sm">
-              Ask Tello a follow-up question about this decision.
-            </p>
+            <p className="text-sm text-dim">Ask Tello a follow-up about this decision.</p>
           ) : (
             messages.map((message, index) => (
               <div
                 key={index}
-                className={`p-4 rounded-lg ${
-                  message.role === 'user' ? 'bg-gray-100 text-gray-900' : 'bg-blue-50 text-blue-900'
+                className={`rounded-md p-4 text-sm leading-relaxed animate-fade-up ${
+                  message.role === 'user'
+                    ? 'bg-raised/60 border border-edge text-ink ml-6'
+                    : 'bg-indigo/10 border border-indigo/30 text-ink mr-6'
                 }`}
               >
+                <p className="label mb-2 text-faint">
+                  {message.role === 'user' ? 'You' : 'Tello'}
+                </p>
                 <p className="whitespace-pre-wrap">{message.content}</p>
               </div>
             ))
           )}
-        </div>
 
-        <form onSubmit={handleChat} className="p-6 border-t border-gray-200 flex gap-2">
-          <input
-            type="text"
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            placeholder="What am I missing?"
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-          />
-          <button
-            type="submit"
-            disabled={chatting || !chatInput.trim()}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50"
-          >
-            {chatting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-          </button>
-        </form>
-      </div>
+          {chatting && <div className="scanner" />}
+
+          <form onSubmit={handleChat} className="flex gap-2 pt-2">
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder="What am I missing?"
+            />
+            <button
+              type="submit"
+              disabled={chatting || !chatInput.trim()}
+              className="btn-primary shrink-0"
+            >
+              <Send size={15} />
+            </button>
+          </form>
+        </div>
+      </Section>
     </div>
   );
 }

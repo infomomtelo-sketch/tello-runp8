@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, Lock } from 'lucide-react';
 
 function ShareView() {
   const [decision, setDecision] = useState(null);
@@ -15,7 +15,6 @@ function ShareView() {
       setLoading(false);
       return;
     }
-
     loadDecision();
   }, [shareToken]);
 
@@ -41,16 +40,23 @@ function ShareView() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center h-screen text-gray-600">Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="w-full max-w-xs space-y-3">
+          <div className="scanner" />
+          <p className="label text-center">Resolving link...</p>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="bg-white rounded-lg shadow p-8 max-w-md w-full text-center">
-          <AlertCircle className="text-red-600 mx-auto mb-4" size={32} />
-          <h1 className="text-xl font-bold text-gray-900 mb-2">Can't open this decision</h1>
-          <p className="text-gray-600">{error}</p>
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="panel p-8 max-w-sm w-full text-center animate-fade-up">
+          <AlertCircle className="text-rose mx-auto mb-4" size={26} />
+          <h1 className="text-lg font-semibold text-white mb-2">Can't open this decision</h1>
+          <p className="text-sm text-dim">{error}</p>
         </div>
       </div>
     );
@@ -59,37 +65,48 @@ function ShareView() {
   const options = Array.isArray(decision.options) ? decision.options : [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Tello</h1>
-          <span className="text-sm text-gray-500">Shared decision — read only</span>
+    <div className="min-h-screen">
+      <nav className="border-b border-edge bg-hull/60 backdrop-blur-sm sticky top-0 z-10">
+        <div className="max-w-3xl mx-auto px-5 py-4 flex items-center justify-between">
+          <span className="text-xl font-bold text-white tracking-tight">Tello</span>
+          <span className="pip text-faint">
+            <Lock size={11} />
+            read only
+          </span>
         </div>
       </nav>
 
-      <main className="max-w-3xl mx-auto p-6 space-y-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-start justify-between">
-            <h2 className="text-2xl font-bold text-gray-900">{decision.title}</h2>
-            {decision.decision ? (
-              <CheckCircle2 className="text-green-600 flex-shrink-0 ml-4" size={20} />
-            ) : (
-              <Clock className="text-yellow-600 flex-shrink-0 ml-4" size={20} />
-            )}
+      <main className="max-w-3xl mx-auto p-5 space-y-5 animate-fade-up">
+        <div className="panel p-6">
+          <div className="flex items-start justify-between gap-4">
+            <h1 className="text-2xl font-bold text-white">{decision.title}</h1>
+            <span className={`pip shrink-0 ${decision.decision ? 'text-emerald' : 'text-amber'}`}>
+              {decision.decision ? <CheckCircle2 size={13} /> : <Clock size={13} />}
+              {decision.decision ? 'resolved' : 'open'}
+            </span>
           </div>
-          <p className="text-gray-400 text-xs mt-2">
-            {new Date(decision.created_at).toLocaleDateString()}
+          <p className="readout text-[11px] text-faint mt-2">
+            {new Date(decision.created_at).toLocaleString()}
           </p>
-          {decision.context && <p className="text-gray-700 mt-4 whitespace-pre-wrap">{decision.context}</p>}
+          {decision.context && (
+            <p className="text-dim mt-4 whitespace-pre-wrap leading-relaxed">{decision.context}</p>
+          )}
         </div>
 
         {options.length > 0 && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Options considered</h3>
-            <ul className="space-y-2">
+          <div className="panel overflow-hidden">
+            <div className="px-5 py-3 border-b border-edge">
+              <span className="label text-ink">Options considered</span>
+            </div>
+            <ul className="divide-y divide-edge">
               {options.map((option, index) => (
-                <li key={index} className="text-gray-700 p-3 bg-gray-50 rounded">
-                  {typeof option === 'string' ? option : JSON.stringify(option)}
+                <li key={index} className="px-5 py-3 flex gap-3">
+                  <span className="readout text-[11px] text-faint pt-0.5">
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <span className="text-ink text-sm">
+                    {typeof option === 'string' ? option : JSON.stringify(option)}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -97,19 +114,24 @@ function ShareView() {
         )}
 
         {decision.reasoning && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Tello's Analysis</h3>
-            <p className="text-gray-700 whitespace-pre-wrap">{decision.reasoning}</p>
+          <div className="panel overflow-hidden">
+            <div className="px-5 py-3 border-b border-edge">
+              <span className="label text-ink">Tello's analysis</span>
+            </div>
+            <p className="p-5 text-ink leading-relaxed whitespace-pre-wrap">{decision.reasoning}</p>
           </div>
         )}
 
         {decision.decision && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-blue-900 mb-2">Decision</h3>
-            <p className="text-blue-900 whitespace-pre-wrap">{decision.decision}</p>
+          <div className="panel border-indigo/40 p-6">
+            <span className="label text-indigo-bright">Decision</span>
+            <p className="text-white mt-3 whitespace-pre-wrap leading-relaxed">
+              {decision.decision}
+            </p>
             {decision.outcome && (
-              <p className="text-blue-800 text-sm mt-4">
-                <strong>Outcome:</strong> {decision.outcome}
+              <p className="text-sm text-dim mt-4 border-t border-edge pt-4">
+                <span className="label">Outcome</span>{' '}
+                <span className="ml-2">{decision.outcome}</span>
               </p>
             )}
           </div>

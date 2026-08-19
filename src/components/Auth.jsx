@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase, appOrigin } from '../lib/supabase';
-import { Mail, Lock } from 'lucide-react';
+import { Lock, Mail, ShieldCheck } from 'lucide-react';
 
 function Auth({ onAuthSuccess }) {
   const [email, setEmail] = useState('');
@@ -19,17 +19,12 @@ function Auth({ onAuthSuccess }) {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: {
-            redirectTo: appOrigin,
-          },
+          options: { redirectTo: appOrigin },
         });
         if (error) throw error;
         setError('Check your email to confirm your account.');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         onAuthSuccess?.();
       }
@@ -41,62 +36,80 @@ function Auth({ onAuthSuccess }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center px-4">
-      <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6 text-center">Tello</h1>
-        <h2 className="text-lg font-semibold text-gray-700 mb-6 text-center">
-          {isSignUp ? 'Create Account' : 'Welcome Back'}
-        </h2>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="w-full max-w-sm animate-fade-up">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 mb-4">
+            <span className="h-1.5 w-1.5 rounded-full bg-cyan animate-breathe" />
+            <span className="label text-faint">System online</span>
+          </div>
+          <h1 className="text-4xl font-bold tracking-tight text-white">Tello</h1>
+          <p className="label mt-2">AI co-founder</p>
+        </div>
 
-        <form onSubmit={handleAuth} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-3 text-gray-400" size={18} />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                required
-              />
-            </div>
+        <div className="panel p-6">
+          <div className="flex items-center gap-2 pb-4 mb-5 border-b border-edge">
+            <ShieldCheck size={14} className="text-indigo-bright" />
+            <span className="label text-ink">
+              {isSignUp ? 'Register operator' : 'Authenticate'}
+            </span>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 text-gray-400" size={18} />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                required
-              />
+          <form onSubmit={handleAuth} className="space-y-5">
+            <div>
+              <label className="label block mb-2">Email</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" size={15} />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="pl-9 font-mono text-sm"
+                  required
+                />
+              </div>
             </div>
-          </div>
 
-          {error && <p className="text-red-600 text-sm">{error}</p>}
+            <div>
+              <label className="label block mb-2">Passphrase</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" size={15} />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="pl-9 font-mono text-sm"
+                  required
+                />
+              </div>
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50"
-          >
-            {loading ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
-          </button>
-        </form>
+            {error && (
+              <p className="font-mono text-xs text-rose leading-relaxed border-l-2 border-rose/60 pl-3">
+                {error}
+              </p>
+            )}
 
-        <p className="text-center text-gray-600 text-sm mt-6">
+            {loading && <div className="scanner" />}
+
+            <button type="submit" disabled={loading} className="btn-primary w-full">
+              {loading ? 'Working...' : isSignUp ? 'Create account' : 'Sign in'}
+            </button>
+          </form>
+        </div>
+
+        <p className="text-center text-sm text-dim mt-6">
           {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
           <button
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="text-blue-600 font-semibold hover:underline"
+            onClick={() => {
+              setIsSignUp(!isSignUp);
+              setError('');
+            }}
+            className="text-indigo-bright font-medium hover:underline"
           >
-            {isSignUp ? 'Sign In' : 'Sign Up'}
+            {isSignUp ? 'Sign in' : 'Sign up'}
           </button>
         </p>
       </div>

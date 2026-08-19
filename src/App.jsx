@@ -54,7 +54,16 @@ function App() {
   // Share view (public, no auth required — handled before the auth gate)
   if (view === 'share') return <ShareView />;
 
-  if (loading) return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-48 space-y-3">
+          <div className="scanner" />
+          <p className="label text-center">Initializing</p>
+        </div>
+      </div>
+    );
+  }
 
   // No onAuthSuccess handler: onAuthStateChange above already sets the session.
   // Passing one that closes over `session` reset it to null right after sign-in.
@@ -66,34 +75,42 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Tello</h1>
-          <div className="flex gap-4">
+    <div className="min-h-screen">
+      <nav className="border-b border-edge bg-hull/60 backdrop-blur-sm sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto px-5 py-3.5 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald animate-breathe" />
+            <span className="text-xl font-bold text-white tracking-tight">Tello</span>
+          </div>
+
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setView('dashboard')}
-              className={`px-4 py-2 rounded ${view === 'dashboard' ? 'bg-blue-600 text-white' : 'text-gray-700'}`}
+              className={`label px-3 py-1.5 rounded transition-colors ${
+                view === 'dashboard' ? 'bg-indigo text-white' : 'text-dim hover:text-ink'
+              }`}
             >
               Dashboard
             </button>
             <button
               onClick={() => setView('decision')}
-              className={`px-4 py-2 rounded ${view === 'decision' ? 'bg-blue-600 text-white' : 'text-gray-700'}`}
+              className={`label px-3 py-1.5 rounded transition-colors ${
+                view === 'decision' ? 'bg-indigo text-white' : 'text-dim hover:text-ink'
+              }`}
             >
-              New Decision
+              New decision
             </button>
             <button
               onClick={() => supabase.auth.signOut()}
-              className="px-4 py-2 text-gray-700"
+              className="label px-3 py-1.5 text-faint hover:text-rose transition-colors"
             >
-              Sign Out
+              Sign out
             </button>
           </div>
         </div>
       </nav>
 
-      <main className="max-w-6xl mx-auto p-6">
+      <main className="max-w-6xl mx-auto p-5">
         {view === 'dashboard' && business && (
           <Dashboard business={business} onNewDecision={() => setView('decision')} />
         )}

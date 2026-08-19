@@ -41,11 +41,17 @@ function Diag() {
   }, [rawUrl, rawKey]);
 
   return (
-    <div style={{ padding: 16, fontFamily: 'monospace', fontSize: 13, lineHeight: 1.6, wordBreak: 'break-all' }}>
-      <h1 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>Tello diagnostics</h1>
-      {lines.map((line, i) => (
-        <div key={i} style={{ marginBottom: 8 }}>{line}</div>
-      ))}
+    <div className="min-h-screen p-6">
+      <div className="max-w-2xl mx-auto panel p-6 animate-fade-up">
+        <h1 className="label text-ink mb-5">Tello diagnostics</h1>
+        <div className="space-y-2">
+          {lines.map((line, i) => (
+            <div key={i} className="font-mono text-xs text-dim break-all leading-relaxed">
+              {line}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

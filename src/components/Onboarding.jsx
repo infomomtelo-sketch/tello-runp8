@@ -1,5 +1,21 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
+
+const STEPS = [
+  { key: 'name', label: 'Business name', hint: 'Acme Inc', type: 'text' },
+  { key: 'type', label: 'Business type', type: 'select' },
+  { key: 'description', label: 'Brief description', hint: 'What do you do?', type: 'textarea' },
+  { key: 'monthly_revenue', label: 'Monthly revenue (USD)', hint: '0', type: 'number' },
+  {
+    key: 'constraints',
+    label: 'Key constraints',
+    hint: 'Solo founder, limited budget...',
+    type: 'textarea',
+  },
+];
+
+const BUSINESS_TYPES = ['product', 'services', 'marketplace', 'saas', 'other'];
 
 function Onboarding({ onComplete }) {
   const [step, setStep] = useState(1);
@@ -13,13 +29,13 @@ function Onboarding({ onComplete }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const businessTypes = ['product', 'services', 'marketplace', 'saas', 'other'];
+  const current = STEPS[step - 1];
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'monthly_revenue' ? parseInt(value) || 0 : value,
+      [name]: name === 'monthly_revenue' ? parseInt(value, 10) || 0 : value,
     }));
   };
 
@@ -45,132 +61,87 @@ function Onboarding({ onComplete }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome to Tello</h1>
-          <div className="flex gap-2">
-            {[1, 2, 3, 4, 5].map((s) => (
-              <div
-                key={s}
-                className={`h-2 flex-1 rounded-full ${
-                  s <= step ? 'bg-blue-600' : 'bg-gray-300'
-                }`}
-              />
-            ))}
-          </div>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="w-full max-w-lg animate-fade-up">
+        <div className="flex items-baseline justify-between mb-4">
+          <h1 className="text-2xl font-bold text-white">Initialize</h1>
+          <span className="readout text-xs">
+            {String(step).padStart(2, '0')} / {String(STEPS.length).padStart(2, '0')}
+          </span>
         </div>
 
-        <form className="space-y-6">
-          {step === 1 && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                What's your business name?
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="Acme Inc"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-              />
-            </div>
+        {/* Step meter */}
+        <div className="flex gap-1.5 mb-8">
+          {STEPS.map((s, i) => (
+            <div
+              key={s.key}
+              className={`h-0.5 flex-1 transition-all duration-300 ${
+                i < step ? 'bg-indigo-bright shadow-glow-sm' : 'bg-edge'
+              }`}
+            />
+          ))}
+        </div>
+
+        <div className="panel p-6">
+          <label className="label block mb-3">{current.label}</label>
+
+          {current.type === 'select' ? (
+            <select name="type" value={formData.type} onChange={handleChange}>
+              <option value="">Select...</option>
+              {BUSINESS_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </option>
+              ))}
+            </select>
+          ) : current.type === 'textarea' ? (
+            <textarea
+              name={current.key}
+              value={formData[current.key]}
+              onChange={handleChange}
+              placeholder={current.hint}
+              rows="4"
+            />
+          ) : (
+            <input
+              type={current.type}
+              name={current.key}
+              value={formData[current.key]}
+              onChange={handleChange}
+              placeholder={current.hint}
+              className={current.type === 'number' ? 'font-mono' : ''}
+            />
           )}
 
-          {step === 2 && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Business type
-              </label>
-              <select
-                name="type"
-                value={formData.type}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-              >
-                <option value="">Select...</option>
-                {businessTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {error && (
+            <p className="font-mono text-xs text-rose mt-4 border-l-2 border-rose/60 pl-3">
+              {error}
+            </p>
           )}
 
-          {step === 3 && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Brief description
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                placeholder="What do you do?"
-                rows="4"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-              />
-            </div>
-          )}
+          {loading && <div className="scanner mt-5" />}
 
-          {step === 4 && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Monthly revenue (USD)
-              </label>
-              <input
-                type="number"
-                name="monthly_revenue"
-                value={formData.monthly_revenue}
-                onChange={handleChange}
-                placeholder="0"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-              />
-            </div>
-          )}
-
-          {step === 5 && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Key constraints (time, budget, team size)
-              </label>
-              <textarea
-                name="constraints"
-                value={formData.constraints}
-                onChange={handleChange}
-                placeholder="Solo founder, limited budget..."
-                rows="4"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-              />
-            </div>
-          )}
-
-          {error && <p className="text-red-600 text-sm">{error}</p>}
-
-          <div className="flex gap-4">
+          <div className="flex gap-3 mt-6">
             <button
               type="button"
               onClick={() => setStep(Math.max(1, step - 1))}
               disabled={step === 1}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              className="btn-ghost flex-1"
             >
+              <ArrowLeft size={15} />
               Back
             </button>
             <button
               type="button"
-              onClick={() => {
-                if (step === 5) handleComplete();
-                else setStep(step + 1);
-              }}
+              onClick={() => (step === STEPS.length ? handleComplete() : setStep(step + 1))}
               disabled={loading}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="btn-primary flex-1"
             >
-              {loading ? 'Loading...' : step === 5 ? 'Create' : 'Next'}
+              {loading ? 'Creating...' : step === STEPS.length ? 'Create' : 'Next'}
+              {step === STEPS.length ? <Check size={15} /> : <ArrowRight size={15} />}
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
