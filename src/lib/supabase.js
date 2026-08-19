@@ -3,7 +3,18 @@ import { createClient } from '@supabase/supabase-js'
 // Values pasted into a dashboard pick up stray whitespace and line breaks. A key
 // containing either produces an invalid HTTP header, so fetch throws before the
 // request is sent ("Load failed" in Safari) — which looks like the server is down.
-const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim().replace(/\/+$/, '')
+// Supabase project URLs are always *.supabase.co. A ".com" typo resolves to
+// nothing, so the request dies at DNS (ERR_NAME_NOT_RESOLVED / "Load failed")
+// and looks like the service is down. Correct it rather than fail.
+const normalizeSupabaseUrl = (value) => {
+  const fixed = value.replace(/^(https?:\/\/[a-z0-9-]+\.supabase)\.com(?=\/|$)/i, '$1.co')
+  if (fixed !== value) {
+    console.warn(`VITE_SUPABASE_URL points at ${value} — using ${fixed}. Fix it in the Pages settings.`)
+  }
+  return fixed
+}
+
+const supabaseUrl = normalizeSupabaseUrl((import.meta.env.VITE_SUPABASE_URL || '').trim().replace(/\/+$/, ''))
 const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').replace(/\s/g, '')
 
 if (!supabaseUrl || !supabaseAnonKey) {
