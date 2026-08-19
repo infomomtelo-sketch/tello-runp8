@@ -38,36 +38,13 @@ Tello v2 MVP - AI co-founder for business owners"
 
 ### 1. **Setup Supabase (nwlhs)**
 
-Run **Phase 1** migration first (in Supabase SQL editor):
-```bash
--- Copy entire contents of tello-schema-phase1.sql
--- Paste into Supabase SQL editor
--- Click Run
-```
+Paste the whole of **`tello-schema-all.sql`** into the Supabase SQL editor and Run.
+It contains Phases 1-3 and is safe to run more than once.
 
-Once Phase 1 is confirmed (6 tables created), run **Phase 2**:
-```bash
--- Copy entire contents of tello-schema-phase2.sql
--- Paste into Supabase SQL editor
--- Click Run
-```
+The final row should read `tello_tables = 9` and `share_function = 1`.
 
-Verify: Should show **9 total Tello tables** in Supabase.
-
-Finally, run **Phase 3** to enable public share links:
-```bash
--- Copy entire contents of tello-schema-phase3.sql
--- Paste into Supabase SQL editor
--- Click Run
-```
-
-Verify: the result should show `get_shared_decision` with
-`is_security_definer = true` and `anon_can_execute = true`.
-
-Share links read through this function rather than a permissive RLS policy —
-the anon key is public, so a table-level "any row with a share_token" policy
-would let anyone dump every shared decision. The function only ever returns the
-single decision whose token the caller already has.
+The individual `tello-schema-phase{1,2,3}.sql` files are kept for reference; the
+combined file is equivalent.
 
 ### 2. **GitHub Setup**
 
@@ -176,6 +153,7 @@ tello-runp8/
 ├── index.js (optional standalone Worker)
 ├── wrangler.toml
 ├── .env.example
+├── tello-schema-all.sql   (run this one)
 ├── tello-schema-phase1.sql
 ├── tello-schema-phase2.sql
 └── tello-schema-phase3.sql
@@ -216,8 +194,7 @@ npm run preview
 
 ## ⚙️ Deployment Checklist
 
-- [ ] Supabase Phase 1 & 2 migrations complete (9 tables visible)
-- [ ] Supabase Phase 3 migration complete (`get_shared_decision` function exists)
+- [ ] `tello-schema-all.sql` run in Supabase (9 tables + `get_shared_decision`)
 - [ ] GitHub repo created & all files uploaded
 - [ ] Cloudflare Pages connected to GitHub
 - [ ] Environment variables set in Cloudflare Pages (all four `VITE_*`, including
