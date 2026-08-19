@@ -2,7 +2,12 @@
 // The app is served by the Pages Functions in functions/api/; this file exists
 // for deploying the same API as its own Worker. Both share shared/tello-claude.js.
 
-import { analyzeDecision, chatWithTello, analyzeImage } from './shared/tello-claude.js';
+import {
+  analyzeDecision,
+  chatWithTello,
+  analyzeImage,
+  reasonOverDecision,
+} from './shared/tello-claude.js';
 
 // Browser origins allowed to call this Worker. Override with the ALLOWED_ORIGINS
 // var (comma-separated) in wrangler.toml or the dashboard.
@@ -64,6 +69,8 @@ export default {
         return await respond(chatWithTello, request, apiKey, corsHeaders);
       } else if (path === '/vision' && request.method === 'POST') {
         return await respond(analyzeImage, request, apiKey, corsHeaders);
+      } else if (path === '/reason' && request.method === 'POST') {
+        return await respond(reasonOverDecision, request, apiKey, corsHeaders);
       } else {
         return new Response(JSON.stringify({ error: 'Not found' }), {
           status: 404,

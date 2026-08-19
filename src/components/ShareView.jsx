@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { AlertCircle, CheckCircle2, Clock, Lock } from 'lucide-react';
+import { analysisToText, readAnalysis } from '../lib/analysis';
+import AnalysisReport from './AnalysisReport';
+import { AlertCircle, CheckCircle2, Clock, Lock, Volume2 } from 'lucide-react';
 
 function ShareView() {
   const [decision, setDecision] = useState(null);
@@ -63,16 +65,32 @@ function ShareView() {
   }
 
   const options = Array.isArray(decision.options) ? decision.options : [];
+  const analysis = readAnalysis(decision.reasoning);
+
+  const speak = () => {
+    const text = [decision.title, analysisToText(analysis), decision.decision]
+      .filter(Boolean)
+      .join('. ');
+    if (!window.speechSynthesis || !text) return;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+  };
 
   return (
     <div className="min-h-screen">
       <nav className="border-b border-edge bg-hull/60 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-5 py-4 flex items-center justify-between">
           <span className="text-xl font-bold text-white tracking-tight">Tello</span>
-          <span className="pip text-faint">
-            <Lock size={11} />
-            read only
-          </span>
+          <div className="flex items-center gap-4">
+            <button onClick={speak} className="pip text-indigo-bright hover:text-white">
+              <Volume2 size={12} />
+              Listen
+            </button>
+            <span className="pip text-faint">
+              <Lock size={11} />
+              read only
+            </span>
+          </div>
         </div>
       </nav>
 
@@ -113,12 +131,14 @@ function ShareView() {
           </div>
         )}
 
-        {decision.reasoning && (
+        {analysis && (
           <div className="panel overflow-hidden">
             <div className="px-5 py-3 border-b border-edge">
               <span className="label text-ink">Tello's analysis</span>
             </div>
-            <p className="p-5 text-ink leading-relaxed whitespace-pre-wrap">{decision.reasoning}</p>
+            <div className="p-5">
+              <AnalysisReport analysis={analysis} />
+            </div>
           </div>
         )}
 

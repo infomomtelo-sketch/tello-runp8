@@ -3,7 +3,8 @@ import { supabase } from './lib/supabase';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
 import Onboarding from './components/Onboarding';
-import DecisionPanelV2 from './components/DecisionPanelV2';
+import CoreHUD from './components/CoreHUD';
+import DecisionConsole from './components/DecisionConsole';
 import ShareView from './components/ShareView';
 import Diag from './components/Diag';
 
@@ -75,50 +76,14 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen">
-      <nav className="border-b border-edge bg-hull/60 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-5 py-3.5 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald animate-breathe" />
-            <span className="text-xl font-bold text-white tracking-tight">Tello</span>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setView('dashboard')}
-              className={`label px-3 py-1.5 rounded transition-colors ${
-                view === 'dashboard' ? 'bg-indigo text-white' : 'text-dim hover:text-ink'
-              }`}
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={() => setView('decision')}
-              className={`label px-3 py-1.5 rounded transition-colors ${
-                view === 'decision' ? 'bg-indigo text-white' : 'text-dim hover:text-ink'
-              }`}
-            >
-              New decision
-            </button>
-            <button
-              onClick={() => supabase.auth.signOut()}
-              className="label px-3 py-1.5 text-faint hover:text-rose transition-colors"
-            >
-              Sign out
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-6xl mx-auto p-5">
-        {view === 'dashboard' && business && (
-          <Dashboard business={business} onNewDecision={() => setView('decision')} />
-        )}
-        {view === 'decision' && business && (
-          <DecisionPanelV2 business={business} onBack={() => setView('dashboard')} />
-        )}
-      </main>
-    </div>
+    <CoreHUD business={business} view={view} onNavigate={setView}>
+      {view === 'dashboard' && business && (
+        <Dashboard business={business} onNewDecision={() => setView('decision')} />
+      )}
+      {view === 'decision' && business && (
+        <DecisionConsole business={business} onBack={() => setView('dashboard')} />
+      )}
+    </CoreHUD>
   );
 }
 

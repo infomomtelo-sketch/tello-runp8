@@ -80,9 +80,12 @@ The API ships with the site — no separate Worker to set up. The three endpoint
 live in `functions/api/` and Cloudflare Pages deploys them automatically on every
 push, alongside the frontend:
 
-- `POST /api/analyze` — Claude decision analysis
+- `POST /api/analyze` — structured decision analysis (summary, recommendation,
+  pros, cons, risks, next steps, confidence)
 - `POST /api/chat` — multi-turn conversation
-- `POST /api/vision` — image analysis
+- `POST /api/vision` — image analysis, scoped to the decision context
+- `POST /api/reason` — re-examines a decision against the current business
+  context and any prior analysis
 
 The only manual step is the key. In **Pages → Settings → Environment variables →
 Production**, add:
@@ -138,10 +141,14 @@ tello-runp8/
 │   │   ├── Auth.jsx
 │   │   ├── Onboarding.jsx
 │   │   ├── Dashboard.jsx
-│   │   ├── DecisionPanelV2.jsx
+│   │   ├── DecisionConsole.jsx
+│   │   ├── AnalysisReport.jsx
+│   │   ├── CoreHUD.jsx
 │   │   └── ShareView.jsx
-│   └── lib/
-│       └── supabase.js
+│   ├── lib/
+│   │   ├── supabase.js
+│   │   └── analysis.js
+│   └── index.css
 ├── functions/
 │   └── api/
 │       ├── analyze.js

@@ -1,8 +1,15 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { AlertCircle, CheckCircle2, Clock, Plus, Radio } from 'lucide-react';
+import { readAnalysis } from '../lib/analysis';
+import { AlertCircle, CheckCircle2, Circle, Clock, Plus, Radio, XCircle } from 'lucide-react';
 
 const money = (cents) => `$${((cents || 0) / 100).toLocaleString()}`;
+
+const OUTCOME_STYLE = {
+  success: { icon: CheckCircle2, tone: 'text-emerald', label: 'worked' },
+  partial: { icon: AlertCircle, tone: 'text-amber', label: 'mixed' },
+  failed: { icon: XCircle, tone: 'text-rose', label: 'did not work' },
+};
 
 function Stat({ label, value, accent = 'text-cyan' }) {
   return (
@@ -10,6 +17,53 @@ function Stat({ label, value, accent = 'text-cyan' }) {
       <p className="label">{label}</p>
       <p className={`font-mono tabular-nums text-2xl mt-2 ${accent}`}>{value}</p>
     </div>
+  );
+}
+
+// One node on the vertical decision timeline.
+function TimelineEntry({ decision, last }) {
+  const analysis = readAnalysis(decision.reasoning);
+  const outcome = OUTCOME_STYLE[decision.outcome];
+  const resolved = Boolean(decision.decision);
+  const Icon = outcome?.icon || (resolved ? CheckCircle2 : Circle);
+  const tone = outcome?.tone || (resolved ? 'text-indigo-bright' : 'text-faint');
+
+  return (
+    <li className="relative pl-8 pb-6">
+      {!last && <span className="absolute left-[7px] top-5 bottom-0 w-px bg-edge" />}
+      <Icon size={15} className={`absolute left-0 top-0.5 ${tone}`} />
+
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="font-semibold text-ink">{decision.title}</h3>
+        <span className="readout text-[11px] text-faint">
+          {new Date(decision.created_at).toLocaleDateString()}
+        </span>
+      </div>
+
+      {decision.context && (
+        <p className="text-sm text-dim mt-1 line-clamp-2">{decision.context}</p>
+      )}
+
+      {decision.decision && (
+        <p className="mt-2 text-sm text-cyan border-l-2 border-cyan/50 pl-3">{decision.decision}</p>
+      )}
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3">
+        <span className={`pip ${resolved ? 'text-indigo-bright' : 'text-amber'}`}>
+          {resolved ? <CheckCircle2 size={11} /> : <Clock size={11} />}
+          {resolved ? 'analyzed' : 'open'}
+        </span>
+        {analysis?.confidence != null && (
+          <span className="pip text-faint">confidence {analysis.confidence}%</span>
+        )}
+        {outcome && (
+          <span className={`pip ${outcome.tone}`}>
+            <outcome.icon size={11} />
+            {outcome.label}
+          </span>
+        )}
+      </div>
+    </li>
   );
 }
 
@@ -66,10 +120,10 @@ function Dashboard({ business, onNewDecision }) {
   }
 
   const resolved = decisions.filter((d) => d.decision).length;
+  const tracked = decisions.filter((d) => d.outcome).length;
 
   return (
     <div className="space-y-6 animate-fade-up">
-      {/* Identity */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white tracking-tight">{business.name}</h1>
@@ -81,19 +135,17 @@ function Dashboard({ business, onNewDecision }) {
         </div>
       </div>
 
-      {/* Readouts */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Stat label="Monthly revenue" value={money(business.monthly_revenue)} />
         <Stat label="Decisions" value={String(decisions.length).padStart(2, '0')} />
-        <Stat label="Resolved" value={String(resolved).padStart(2, '0')} accent="text-emerald" />
+        <Stat label="Analyzed" value={String(resolved).padStart(2, '0')} accent="text-indigo-bright" />
         <Stat
-          label="Open alerts"
-          value={String(alerts.length).padStart(2, '0')}
-          accent={alerts.length ? 'text-amber' : 'text-faint'}
+          label="Outcomes logged"
+          value={String(tracked).padStart(2, '0')}
+          accent={tracked ? 'text-emerald' : 'text-faint'}
         />
       </div>
 
-      {/* Alerts */}
       {alerts.length > 0 && (
         <div className="panel border-amber/30 p-5">
           <div className="flex items-center gap-2 mb-4">
@@ -124,10 +176,9 @@ function Dashboard({ business, onNewDecision }) {
         New decision
       </button>
 
-      {/* Log */}
       <div className="panel overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3 border-b border-edge">
-          <span className="label text-ink">Decision log</span>
+          <span className="label text-ink">Decision timeline</span>
           <span className="readout text-[11px] text-faint">
             {String(decisions.length).padStart(3, '0')} records
           </span>
@@ -138,32 +189,15 @@ function Dashboard({ business, onNewDecision }) {
             No decisions logged. Create one to get started.
           </p>
         ) : (
-          <div className="divide-y divide-edge">
-            {decisions.slice(0, 10).map((decision) => (
-              <div key={decision.id} className="p-5 hover:bg-raised/40 transition-colors">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-ink">{decision.title}</h3>
-                    {decision.context && (
-                      <p className="text-sm text-dim mt-1 line-clamp-2">{decision.context}</p>
-                    )}
-                    {decision.decision && (
-                      <p className="mt-3 text-sm text-cyan border-l-2 border-cyan/50 pl-3">
-                        {decision.decision}
-                      </p>
-                    )}
-                  </div>
-                  <span className={`pip shrink-0 ${decision.decision ? 'text-emerald' : 'text-amber'}`}>
-                    {decision.decision ? <CheckCircle2 size={13} /> : <Clock size={13} />}
-                    {decision.decision ? 'resolved' : 'open'}
-                  </span>
-                </div>
-                <p className="readout text-[11px] text-faint mt-4">
-                  {new Date(decision.created_at).toLocaleString()}
-                </p>
-              </div>
+          <ul className="p-5">
+            {decisions.map((decision, i) => (
+              <TimelineEntry
+                key={decision.id}
+                decision={decision}
+                last={i === decisions.length - 1}
+              />
             ))}
-          </div>
+          </ul>
         )}
       </div>
     </div>
