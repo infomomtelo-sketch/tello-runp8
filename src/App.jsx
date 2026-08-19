@@ -5,6 +5,7 @@ import Dashboard from './components/Dashboard';
 import Onboarding from './components/Onboarding';
 import DecisionPanelV2 from './components/DecisionPanelV2';
 import ShareView from './components/ShareView';
+import Diag from './components/Diag';
 
 function App() {
   const [session, setSession] = useState(null);
@@ -46,6 +47,9 @@ function App() {
     if (data) setBusiness(data);
     if (error && error.code !== 'PGRST116') console.error(error);
   };
+
+  // Diagnostics (public) — must run before anything that touches Supabase.
+  if (new URLSearchParams(window.location.search).has('diag')) return <Diag />;
 
   // Share view (public, no auth required — handled before the auth gate)
   if (view === 'share') return <ShareView />;
