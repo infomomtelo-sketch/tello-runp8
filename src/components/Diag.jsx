@@ -33,11 +33,37 @@ function Diag() {
       }
     };
 
-    (async () => {
-      await probe('no-key probe', '/rest/v1/', {});
-      await probe('with-key probe', '/auth/v1/settings', { apikey: key });
-      setLines([...out]);
-    })();
+    // The call that has never worked: the Pages Function that talks to Claude.
+    const probeApi = async () => {
+      try {
+        const res = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            context: 'diagnostic ping',
+            options: 'a or b',
+            business_type: 'saas',
+            revenue: 0,
+            constraints: 'none',
+            images: [],
+          }),
+        });
+        const body = await res.text();
+
+        if (res.status === 404) {
+          show('/api/analyze', 'HTTP 404 — Pages Functions did not deploy');
+        } else if (body.includes('Missing ANTHROPIC_API_KEY')) {
+          show('/api/analyze', 'HTTP 500 — ANTHROPIC_API_KEY not set on this deployment');
+        } else if (body.includes('invalid x-api-key') || body.includes('authentication_error')) {
+          show('/api/analyze', 'HTTP 500 — the API key is set but rejected by Anthropic');
+        } else {
+          show('/api/analyze', `HTTP ${res.status} — ${body.slice(0, 220)}`);
+        }
+      } catch (err) {
+        show('/api/analyze', `THREW ${err.name}: ${err.message}`);
+      }
+    };
+
   }, [rawUrl, rawKey]);
 
   return (
