@@ -4,6 +4,7 @@ import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
 import Onboarding from './components/Onboarding';
 import CoreHUD from './components/CoreHUD';
+import ResetPassword from './components/ResetPassword';
 import DecisionConsole from './components/DecisionConsole';
 import ShareView from './components/ShareView';
 import Diag from './components/Diag';
@@ -16,6 +17,9 @@ function App() {
     new URLSearchParams(window.location.search).has('share') ? 'share' : 'dashboard'
   );
   const [selectedDecision, setSelectedDecision] = useState(null);
+  const [recovering, setRecovering] = useState(() =>
+    new URLSearchParams(window.location.search).has('recovery')
+  );
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -25,7 +29,10 @@ function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      // Supabase signs the user in when they follow a recovery link; show the
+      // set-password screen rather than dropping them straight into the app.
+      if (event === 'PASSWORD_RECOVERY') setRecovering(true);
       setSession(session);
     });
 
@@ -51,6 +58,17 @@ function App() {
 
   // Diagnostics (public) — must run before anything that touches Supabase.
   if (new URLSearchParams(window.location.search).has('diag')) return <Diag />;
+
+  if (recovering && session) {
+    return (
+      <ResetPassword
+        onDone={() => {
+          setRecovering(false);
+          window.history.replaceState({}, '', window.location.pathname);
+        }}
+      />
+    );
+  }
 
   // Share view (public, no auth required — handled before the auth gate)
   if (view === 'share') return <ShareView />;

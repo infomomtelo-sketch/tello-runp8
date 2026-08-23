@@ -6,13 +6,35 @@ function Auth({ onAuthSuccess }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
+  const [mode, setMode] = useState('auth'); // 'auth' | 'forgot'
+  const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const handleForgot = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setNotice('');
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${appOrigin}/?recovery=1`,
+      });
+      if (error) throw error;
+      setNotice('If that email has an account, a reset link is on its way.');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAuth = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setNotice('');
 
     try {
       if (isSignUp) {
@@ -51,11 +73,11 @@ function Auth({ onAuthSuccess }) {
           <div className="flex items-center gap-2 pb-4 mb-5 border-b border-edge">
             <ShieldCheck size={14} className="text-indigo-bright" />
             <span className="label text-ink">
-              {isSignUp ? 'Register operator' : 'Authenticate'}
+              {mode === 'forgot' ? 'Recover access' : isSignUp ? 'Register operator' : 'Authenticate'}
             </span>
           </div>
 
-          <form onSubmit={handleAuth} className="space-y-5">
+          <form onSubmit={mode === 'forgot' ? handleForgot : handleAuth} className="space-y-5">
             <div>
               <label className="label block mb-2">Email</label>
               <div className="relative">
@@ -71,20 +93,37 @@ function Auth({ onAuthSuccess }) {
               </div>
             </div>
 
-            <div>
-              <label className="label block mb-2">Passphrase</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" size={15} />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="pl-9 font-mono text-sm"
-                  required
-                />
+            {mode !== 'forgot' && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="label">Passphrase</label>
+                  {!isSignUp && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode('forgot');
+                        setError('');
+                        setNotice('');
+                      }}
+                      className="label text-indigo-bright hover:text-white"
+                    >
+                      Forgot?
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" size={15} />
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="pl-9 font-mono text-sm"
+                    required
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             {error && (
               <p className="font-mono text-xs text-rose leading-relaxed border-l-2 border-rose/60 pl-3">
@@ -92,25 +131,53 @@ function Auth({ onAuthSuccess }) {
               </p>
             )}
 
+            {notice && (
+              <p className="font-mono text-xs text-cyan leading-relaxed border-l-2 border-cyan/60 pl-3">
+                {notice}
+              </p>
+            )}
+
             {loading && <div className="scanner" />}
 
             <button type="submit" disabled={loading} className="btn-primary w-full">
-              {loading ? 'Working...' : isSignUp ? 'Create account' : 'Sign in'}
+              {loading
+                ? 'Working...'
+                : mode === 'forgot'
+                  ? 'Send reset link'
+                  : isSignUp
+                    ? 'Create account'
+                    : 'Sign in'}
             </button>
           </form>
         </div>
 
         <p className="text-center text-sm text-dim mt-6">
-          {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
-          <button
-            onClick={() => {
-              setIsSignUp(!isSignUp);
-              setError('');
-            }}
-            className="text-indigo-bright font-medium hover:underline"
-          >
-            {isSignUp ? 'Sign in' : 'Sign up'}
-          </button>
+          {mode === 'forgot' ? (
+            <button
+              onClick={() => {
+                setMode('auth');
+                setError('');
+                setNotice('');
+              }}
+              className="text-indigo-bright font-medium hover:underline"
+            >
+              Back to sign in
+            </button>
+          ) : (
+            <>
+              {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
+              <button
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setError('');
+                  setNotice('');
+                }}
+                className="text-indigo-bright font-medium hover:underline"
+              >
+                {isSignUp ? 'Sign in' : 'Sign up'}
+              </button>
+            </>
+          )}
         </p>
       </div>
     </div>
