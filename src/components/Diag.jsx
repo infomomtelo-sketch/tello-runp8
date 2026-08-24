@@ -63,23 +63,3 @@ function Diag() {
         show('/api/analyze', `THREW ${err.name}: ${err.message}`);
       }
     };
-
-  }, [rawUrl, rawKey]);
-
-  return (
-    <div className="min-h-screen p-6">
-      <div className="max-w-2xl mx-auto panel p-6 animate-fade-up">
-        <h1 className="label text-ink mb-5">Tello diagnostics</h1>
-        <div className="space-y-2">
-          {lines.map((line, i) => (
-            <div key={i} className="font-mono text-xs text-dim break-all leading-relaxed">
-              {line}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default Diag;
