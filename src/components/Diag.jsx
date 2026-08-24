@@ -14,7 +14,13 @@ function Diag() {
     const key = (rawKey || '').replace(/\s/g, '');
     const out = [];
 
-    const show = (label, value) => out.push(`${label}: ${value}`);
+    // Push a line AND flush it to state immediately — results should appear as
+    // each check finishes, not just at the end (and see below: some checks are
+    // async, so without this nothing after the sync block ever renders).
+    const show = (label, value) => {
+      out.push(`${label}: ${value}`);
+      setLines([...out]);
+    };
 
     show('URL', url || '(EMPTY — not set in Pages)');
     show('key length', key.length || '(EMPTY — not set in Pages)');
@@ -63,3 +69,32 @@ function Diag() {
         show('/api/analyze', `THREW ${err.name}: ${err.message}`);
       }
     };
+
+    // Both probes above were defined but never invoked, and `out` was never
+    // handed to setLines — the page has been stuck on "running..." forever,
+    // regardless of what the API or Supabase actually returned. That's the
+    // real reason the blocker looked unresolved: the tool reporting on it was
+    // silently broken. Fixed by actually calling them:
+    if (url) {
+      probe('Supabase reachability', '/rest/v1/', { apikey: key });
+    }
+    probeApi();
+  }, [rawUrl, rawKey]);
+
+  return (
+    <div className="min-h-screen p-6">
+      <div className="max-w-2xl mx-auto panel p-6 animate-fade-up">
+        <h1 className="label text-ink mb-5">Tello diagnostics</h1>
+        <div className="space-y-2">
+          {lines.map((line, i) => (
+            <div key={i} className="font-mono text-xs text-dim break-all leading-relaxed">
+              {line}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default Diag;
